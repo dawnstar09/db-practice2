@@ -7,6 +7,7 @@ import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Post } from '../../types';
 import { Heart, Eye, TrendingUp, Clock } from 'lucide-react';
+import Head from 'next/head';
 
 export default function Home() {
   const { user } = useAuth();
