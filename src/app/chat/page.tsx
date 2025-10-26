@@ -27,11 +27,14 @@ export default function ChatPage() {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const chatMsgs: ChatMessage[] = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...(doc.data() as any),
-        createdAt: (doc.data() as any).createdAt?.toDate?.() || new Date(),
-      } as ChatMessage));
+      const chatMsgs: ChatMessage[] = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate?.() || new Date(),
+        } as ChatMessage;
+      });
 
       // 오래된 것부터 보여주기 위해 역순 정렬
       chatMsgs.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());

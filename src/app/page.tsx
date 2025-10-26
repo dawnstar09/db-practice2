@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import Link from 'next/link';
-import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Post } from '../../types';
-import { Heart, MessageCircle, Eye, TrendingUp, Clock } from 'lucide-react';
+import { Heart, Eye, TrendingUp, Clock } from 'lucide-react';
 
 export default function Home() {
   const { user } = useAuth();

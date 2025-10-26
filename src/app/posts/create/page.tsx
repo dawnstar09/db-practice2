@@ -93,7 +93,7 @@ export default function CreatePostPage() {
     setLoading(true);
     
     try {
-      let attachments: any[] = [];
+      let attachments: { name: string; url: string; type: string }[] = [];
       
       // 파일 업로드
       if (files.length > 0) {

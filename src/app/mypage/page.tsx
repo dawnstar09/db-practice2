@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import Link from 'next/link';
-import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Post } from '../../../types';
 import { Heart, MessageCircle, Eye, Calendar, ArrowLeft, User } from 'lucide-react';
