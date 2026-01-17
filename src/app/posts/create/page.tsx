@@ -8,6 +8,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { useForm } from 'react-hook-form';
 import { Save, ArrowLeft, Upload, X, Hash, File, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface PostForm {
   title: string;
@@ -444,11 +445,12 @@ export default function CreatePostPage() {
                     <div key={index} className="flex items-start space-x-3 bg-gray-700 rounded-lg p-3">
                       {/* 이미지 미리보기 */}
                       {file.type.startsWith('image/') && filePreviewUrls[index] && (
-                        <div className="flex-shrink-0">
-                          <img
+                        <div className="flex-shrink-0 relative w-16 h-16">
+                          <Image
                             src={filePreviewUrls[index]}
                             alt={file.name}
-                            className="w-16 h-16 object-cover rounded border border-gray-600"
+                            fill
+                            className="object-cover rounded border border-gray-600"
                           />
                         </div>
                       )}
