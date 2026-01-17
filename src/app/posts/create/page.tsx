@@ -106,7 +106,7 @@ export default function CreatePostPage() {
       const formData = new FormData();
       formData.append('image', base64);
       
-      const response = await fetch('https://api.imgbb.com/1/upload?key=8d32c3c07b6e65b0f5d0b5d3c5e8f6c0', {
+      const response = await fetch(`https://api.imgbb.com/1/upload?key=${process.env.NEXT_PUBLIC_IMGBB_API_KEY}`, {
         method: 'POST',
         body: formData
       });
@@ -168,7 +168,7 @@ export default function CreatePostPage() {
           const formData = new FormData();
           formData.append('image', base64);
           
-          const response = await fetch('https://api.imgbb.com/1/upload?key=8d32c3c07b6e65b0f5d0b5d3c5e8f6c0', {
+          const response = await fetch(`https://api.imgbb.com/1/upload?key=${process.env.NEXT_PUBLIC_IMGBB_API_KEY}`, {
             method: 'POST',
             body: formData
           });
