@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { useAuth } from '@/components/AuthProvider';
 import { useForm } from 'react-hook-form';
 import { Save, ArrowLeft, Upload, X, Hash, File, AlertCircle } from 'lucide-react';
@@ -47,10 +46,10 @@ export default function CreatePostPage() {
         size: `${(f.size / 1024 / 1024).toFixed(2)} MB`
       })));
       
-      // 파일 크기 체크
-      const oversizedFiles = newFiles.filter(f => f.size > 10 * 1024 * 1024);
+      // 파일 크기 체크 (32MB - ImgBB 무료 제한)
+      const oversizedFiles = newFiles.filter(f => f.size > 32 * 1024 * 1024);
       if (oversizedFiles.length > 0) {
-        alert(`다음 파일들이 10MB를 초과합니다:\n${oversizedFiles.map(f => `- ${f.name} (${(f.size / 1024 / 1024).toFixed(2)} MB)`).join('\n')}`);
+        alert(`다음 파일들이 32MB를 초과합니다:\n${oversizedFiles.map(f => `- ${f.name} (${(f.size / 1024 / 1024).toFixed(2)} MB)`).join('\n')}`);
         return;
       }
       
@@ -81,58 +80,50 @@ export default function CreatePostPage() {
 
   const testStorageConnection = async () => {
     setStorageTestResult('테스트 중...');
-    console.log('=== Firebase Storage 연결 테스트 시작 ===');
+    console.log('=== ImgBB 연결 테스트 시작 ===');
     
     try {
-      // Storage 객체 확인
-      console.log('Storage 객체:', storage);
-      console.log('Storage app:', storage.app);
-      console.log('User:', user);
-      
       if (!user) {
         setStorageTestResult('❌ 로그인이 필요합니다');
         return;
       }
       
-      // 테스트 파일 생성 (1KB 텍스트 파일)
-      const testContent = 'Firebase Storage 연결 테스트';
-      const testBlob = new Blob([testContent], { type: 'text/plain' });
-      const testFile = new File([testBlob], 'test.txt', { type: 'text/plain' });
+      // 1x1 픽셀 테스트 이미지 생성
+      const canvas = document.createElement('canvas');
+      canvas.width = 1;
+      canvas.height = 1;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, 1, 1);
+      }
       
-      console.log('테스트 파일 생성:', testFile);
+      const base64 = canvas.toDataURL('image/png').split(',')[1];
       
-      const testPath = `posts/${user.uid}/test_${Date.now()}.txt`;
-      const testRef = ref(storage, testPath);
+      console.log('테스트 이미지 생성 완료, ImgBB에 업로드 중...');
       
-      console.log('테스트 경로:', testPath);
-      console.log('Storage Reference:', testRef);
+      const formData = new FormData();
+      formData.append('image', base64);
       
-      // 업로드 시도
-      console.log('업로드 시도 중...');
-      const snapshot = await uploadBytes(testRef, testFile);
-      console.log('업로드 성공:', snapshot);
+      const response = await fetch('https://api.imgbb.com/1/upload?key=8d32c3c07b6e65b0f5d0b5d3c5e8f6c0', {
+        method: 'POST',
+        body: formData
+      });
       
-      const url = await getDownloadURL(snapshot.ref);
-      console.log('다운로드 URL:', url);
+      const result = await response.json();
       
-      setStorageTestResult('✅ Storage 연결 정상! 이미지 업로드가 가능합니다.');
-      console.log('=== Storage 테스트 성공 ===');
+      if (result.success) {
+        setStorageTestResult('✅ ImgBB 연결 정상! 이미지 업로드가 가능합니다. (무료 서비스)');
+        console.log('=== ImgBB 테스트 성공 ===');
+      } else {
+        throw new Error('ImgBB 업로드 실패');
+      }
       
     } catch (error) {
-      console.error('=== Storage 테스트 실패 ===');
+      console.error('=== ImgBB 테스트 실패 ===');
       console.error('Error:', error);
       
-      if (error instanceof Error) {
-        if (error.message.includes('permission')) {
-          setStorageTestResult('❌ Storage 권한 오류: Firebase Console에서 Storage Rules를 확인해주세요.\n\nSTORAGE_SETUP.md 파일을 참조하세요.');
-        } else if (error.message.includes('unauthorized')) {
-          setStorageTestResult('❌ 인증 오류: 로그아웃 후 다시 로그인해주세요.');
-        } else {
-          setStorageTestResult(`❌ 오류 발생: ${error.message}\n\n자세한 내용은 브라우저 콘솔(F12)을 확인하세요.`);
-        }
-      } else {
-        setStorageTestResult('❌ 알 수 없는 오류가 발생했습니다.');
-      }
+      setStorageTestResult('❌ ImgBB 연결 오류: 잠시 후 다시 시도해주세요.');
     }
   };
 
@@ -140,8 +131,7 @@ export default function CreatePostPage() {
     const attachments = [];
     
     try {
-      console.log('=== 파일 업로드 시작 ===');
-      console.log('Storage 객체:', storage);
+      console.log('=== 파일 업로드 시작 (ImgBB 사용) ===');
       console.log('업로드할 파일 수:', files.length);
       
       for (let i = 0; i < files.length; i++) {
@@ -152,47 +142,48 @@ export default function CreatePostPage() {
           size: `${(file.size / 1024 / 1024).toFixed(2)} MB`
         });
         
-        // 파일 크기 제한 (10MB)
-        if (file.size > 10 * 1024 * 1024) {
-          throw new Error(`파일 "${file.name}"이 10MB를 초과합니다. (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+        // 파일 크기 제한 (32MB - ImgBB 무료 제한)
+        if (file.size > 32 * 1024 * 1024) {
+          throw new Error(`파일 "${file.name}"이 32MB를 초과합니다. (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
         }
         
-        // 파일명 안전하게 변환 (특수문자 제거, 연속된 문자 축소)
-        const fileExtension = file.name.split('.').pop() || 'file';
-        const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
-        const cleanFileName = fileNameWithoutExt
-          .replace(/[^a-zA-Z0-9가-힣]/g, '-')  // 특수문자를 대시로 변경
-          .replace(/-+/g, '-')  // 연속된 대시를 하나로
-          .replace(/^-|-$/g, '')  // 앞뒤 대시 제거
-          .substring(0, 50);  // 파일명 길이 제한
-        
-        const sanitizedFileName = cleanFileName 
-          ? `${cleanFileName}.${fileExtension}` 
-          : `file_${Date.now()}.${fileExtension}`;
-        
-        const storagePath = `posts/${user?.uid}/${Date.now()}_${sanitizedFileName}`;
-        console.log('원본 파일명:', file.name);
-        console.log('정리된 파일명:', sanitizedFileName);
-        console.log('Storage 경로:', storagePath);
-        
         try {
-          const fileRef = ref(storage, storagePath);
-          console.log('Storage Reference 생성 완료');
+          // 파일을 base64로 변환
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const base64String = reader.result as string;
+              // "data:image/png;base64," 부분 제거
+              const base64Data = base64String.split(',')[1];
+              resolve(base64Data);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
           
-          console.log('업로드 중...');
-          // 메타데이터 설정으로 CORS 문제 완화
-          const metadata = {
-            contentType: file.type,
-            customMetadata: {
-              uploadedBy: user?.uid || 'unknown',
-              originalName: file.name
-            }
-          };
-          const snapshot = await uploadBytes(fileRef, file, metadata);
-          console.log('업로드 완료, URL 가져오는 중...');
+          console.log('Base64 변환 완료, ImgBB에 업로드 중...');
           
-          const url = await getDownloadURL(snapshot.ref);
-          console.log('다운로드 URL 획득:', url);
+          // ImgBB API로 업로드 (무료 API 키 사용)
+          const formData = new FormData();
+          formData.append('image', base64);
+          
+          const response = await fetch('https://api.imgbb.com/1/upload?key=8d32c3c07b6e65b0f5d0b5d3c5e8f6c0', {
+            method: 'POST',
+            body: formData
+          });
+          
+          if (!response.ok) {
+            throw new Error(`ImgBB 업로드 실패: ${response.statusText}`);
+          }
+          
+          const result = await response.json();
+          
+          if (!result.success) {
+            throw new Error('ImgBB 업로드 실패');
+          }
+          
+          const url = result.data.url;
+          console.log('업로드 완료, URL:', url);
           
           attachments.push({
             id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
@@ -216,7 +207,6 @@ export default function CreatePostPage() {
       if (error instanceof Error) {
         console.error('Error name:', error.name);
         console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
       }
       throw error;
     }
@@ -319,20 +309,23 @@ export default function CreatePostPage() {
           <h1 className="text-3xl font-bold text-white">새 글 작성</h1>
           <p className="text-gray-400 mt-2">커뮤니티와 함께 나누고 싶은 이야기를 작성해보세요</p>
           
-          {/* Storage 연결 테스트 */}
-          <div className="mt-4 bg-blue-900/20 border border-blue-700 rounded-lg p-4">
+          {/* ImgBB 연결 테스트 */}
+          <div className="mt-4 bg-green-900/20 border border-green-700 rounded-lg p-4">
             <div className="flex items-start space-x-3">
-              <AlertCircle className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <h3 className="text-sm font-medium text-blue-300 mb-2">
-                  이미지 업로드가 안 되시나요?
+                <h3 className="text-sm font-medium text-green-300 mb-2">
+                  🆓 무료 이미지 호스팅 (ImgBB) 사용 중
                 </h3>
+                <p className="text-xs text-green-200 mb-2">
+                  Firebase Storage 대신 무료 이미지 호스팅 서비스를 사용합니다.
+                </p>
                 <button
                   type="button"
                   onClick={testStorageConnection}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm transition-colors"
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm transition-colors"
                 >
-                  Storage 연결 테스트
+                  연결 테스트
                 </button>
                 {storageTestResult && (
                   <div className={`mt-3 p-3 rounded text-sm whitespace-pre-line ${
