@@ -157,9 +157,22 @@ export default function CreatePostPage() {
           throw new Error(`파일 "${file.name}"이 10MB를 초과합니다. (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
         }
         
-        // 파일명 안전하게 변환
-        const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+        // 파일명 안전하게 변환 (특수문자 제거, 연속된 문자 축소)
+        const fileExtension = file.name.split('.').pop() || 'file';
+        const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
+        const cleanFileName = fileNameWithoutExt
+          .replace(/[^a-zA-Z0-9가-힣]/g, '-')  // 특수문자를 대시로 변경
+          .replace(/-+/g, '-')  // 연속된 대시를 하나로
+          .replace(/^-|-$/g, '')  // 앞뒤 대시 제거
+          .substring(0, 50);  // 파일명 길이 제한
+        
+        const sanitizedFileName = cleanFileName 
+          ? `${cleanFileName}.${fileExtension}` 
+          : `file_${Date.now()}.${fileExtension}`;
+        
         const storagePath = `posts/${user?.uid}/${Date.now()}_${sanitizedFileName}`;
+        console.log('원본 파일명:', file.name);
+        console.log('정리된 파일명:', sanitizedFileName);
         console.log('Storage 경로:', storagePath);
         
         try {
@@ -167,7 +180,15 @@ export default function CreatePostPage() {
           console.log('Storage Reference 생성 완료');
           
           console.log('업로드 중...');
-          const snapshot = await uploadBytes(fileRef, file);
+          // 메타데이터 설정으로 CORS 문제 완화
+          const metadata = {
+            contentType: file.type,
+            customMetadata: {
+              uploadedBy: user?.uid || 'unknown',
+              originalName: file.name
+            }
+          };
+          const snapshot = await uploadBytes(fileRef, file, metadata);
           console.log('업로드 완료, URL 가져오는 중...');
           
           const url = await getDownloadURL(snapshot.ref);

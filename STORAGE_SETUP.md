@@ -65,8 +65,61 @@ NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=data-sunlight-467707-r7.firebasestorage.app
 - `permission-denied`: Storage 보안 규칙 문제
 - `storage/unauthorized`: 인증 문제
 - `storage/object-not-found`: Storage가 활성화되지 않음
+- `CORS policy`: CORS 설정 문제 (아래 7번 참조)
 
-### 7. 테스트 방법
+### 7. Firebase Storage CORS 설정 (중요!)
+
+CORS 에러가 발생하면 다음 단계를 따르세요:
+
+#### 방법 1: Firebase Console에서 설정 (권장)
+
+Firebase Storage는 기본적으로 모든 도메인에서의 접근을 허용하지만, 특정 경우에 CORS 에러가 발생할 수 있습니다.
+
+1. Google Cloud Console (https://console.cloud.google.com) 접속
+2. 프로젝트 선택 (data-sunlight-467707-r7)
+3. 왼쪽 메뉴 → **Cloud Storage** → **버킷**
+4. `data-sunlight-467707-r7.firebasestorage.app` 버킷 선택
+5. 상단의 **권한** 탭 클릭
+6. CORS 설정 확인 및 수정
+
+#### 방법 2: gsutil 명령줄 도구 사용
+
+`cors.json` 파일 생성:
+
+```json
+[
+  {
+    "origin": ["*"],
+    "method": ["GET", "HEAD", "PUT", "POST", "DELETE"],
+    "maxAgeSeconds": 3600,
+    "responseHeader": ["Content-Type", "Access-Control-Allow-Origin"]
+  }
+]
+```
+
+명령 실행:
+```bash
+gsutil cors set cors.json gs://data-sunlight-467707-r7.firebasestorage.app
+```
+
+#### 방법 3: 특정 도메인만 허용 (보안 강화)
+
+```json
+[
+  {
+    "origin": [
+      "https://db-practice2.vercel.app",
+      "https://db-practice2-*.vercel.app",
+      "http://localhost:3000"
+    ],
+    "method": ["GET", "HEAD", "PUT", "POST", "DELETE"],
+    "maxAgeSeconds": 3600,
+    "responseHeader": ["Content-Type", "Access-Control-Allow-Origin"]
+  }
+]
+```
+
+### 8. 테스트 방법
 
 1. 로그인한 상태에서 게시글 작성 페이지로 이동
 2. 작은 이미지 파일(1MB 이하) 선택
@@ -76,6 +129,10 @@ NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=data-sunlight-467707-r7.firebasestorage.app
    - "✓ 파일 업로드 성공" 메시지
 
 ### 문제 해결
+
+#### "CORS policy" 에러
+→ Firebase Storage CORS 설정 필요 (위의 7번 참조)
+→ 파일명에 특수문자가 너무 많으면 제거 (자동으로 처리됨)
 
 #### "permission-denied" 에러
 → Firebase Console에서 Storage Rules 확인 및 수정
