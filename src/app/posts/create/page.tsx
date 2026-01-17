@@ -309,37 +309,6 @@ export default function CreatePostPage() {
           </Link>
           <h1 className="text-3xl font-bold text-white">새 글 작성</h1>
           <p className="text-gray-400 mt-2">커뮤니티와 함께 나누고 싶은 이야기를 작성해보세요</p>
-          
-          {/* ImgBB 연결 테스트 */}
-          <div className="mt-4 bg-green-900/20 border border-green-700 rounded-lg p-4">
-            <div className="flex items-start space-x-3">
-              <AlertCircle className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <h3 className="text-sm font-medium text-green-300 mb-2">
-                  🆓 무료 이미지 호스팅 (ImgBB) 사용 중
-                </h3>
-                <p className="text-xs text-green-200 mb-2">
-                  Firebase Storage 대신 무료 이미지 호스팅 서비스를 사용합니다.
-                </p>
-                <button
-                  type="button"
-                  onClick={testStorageConnection}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm transition-colors"
-                >
-                  연결 테스트
-                </button>
-                {storageTestResult && (
-                  <div className={`mt-3 p-3 rounded text-sm whitespace-pre-line ${
-                    storageTestResult.startsWith('✅') 
-                      ? 'bg-green-900/30 text-green-300 border border-green-700' 
-                      : 'bg-red-900/30 text-red-300 border border-red-700'
-                  }`}>
-                    {storageTestResult}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
         </div>
 
         <div className="bg-gray-800 rounded-lg border border-gray-700">
